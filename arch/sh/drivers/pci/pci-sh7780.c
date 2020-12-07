@@ -1,11 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Low-Level PCI Support for the SH7780
  *
  *  Copyright (C) 2005 - 2010  Paul Mundt
- *
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file "COPYING" in the main directory of this archive
- * for more details.
  */
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -19,7 +16,14 @@
 #include <linux/log2.h>
 #include "pci-sh4.h"
 #include <asm/mmu.h>
-#include <asm/sizes.h>
+#include <linux/sizes.h>
+
+#if defined(CONFIG_CPU_BIG_ENDIAN)
+# define PCICR_ENDIANNESS SH4_PCICR_BSWP
+#else
+# define PCICR_ENDIANNESS 0
+#endif
+
 
 static struct resource sh7785_pci_resources[] = {
 	{
@@ -74,7 +78,7 @@ struct pci_errors {
 	{ SH4_PCIINT_MLCK,	"master lock error" },
 	{ SH4_PCIINT_TABT,	"target-target abort" },
 	{ SH4_PCIINT_TRET,	"target retry time out" },
-	{ SH4_PCIINT_MFDE,	"master function disable erorr" },
+	{ SH4_PCIINT_MFDE,	"master function disable error" },
 	{ SH4_PCIINT_PRTY,	"address parity error" },
 	{ SH4_PCIINT_SERR,	"SERR" },
 	{ SH4_PCIINT_TWDP,	"data parity error for target write" },
@@ -254,7 +258,7 @@ static int __init sh7780_pci_init(void)
 	__raw_writel(PCIECR_ENBL, PCIECR);
 
 	/* Reset */
-	__raw_writel(SH4_PCICR_PREFIX | SH4_PCICR_PRST,
+	__raw_writel(SH4_PCICR_PREFIX | SH4_PCICR_PRST | PCICR_ENDIANNESS,
 		     chan->reg_base + SH4_PCICR);
 
 	/*
@@ -290,7 +294,8 @@ static int __init sh7780_pci_init(void)
 	 * Now throw it in to register initialization mode and
 	 * start the real work.
 	 */
-	__raw_writel(SH4_PCICR_PREFIX, chan->reg_base + SH4_PCICR);
+	__raw_writel(SH4_PCICR_PREFIX | PCICR_ENDIANNESS,
+		     chan->reg_base + SH4_PCICR);
 
 	memphys = __pa(memory_start);
 	memsize = roundup_pow_of_two(memory_end - memory_start);
@@ -380,7 +385,8 @@ static int __init sh7780_pci_init(void)
 	 * Initialization mode complete, release the control register and
 	 * enable round robin mode to stop device overruns/starvation.
 	 */
-	__raw_writel(SH4_PCICR_PREFIX | SH4_PCICR_CFIN | SH4_PCICR_FTO,
+	__raw_writel(SH4_PCICR_PREFIX | SH4_PCICR_CFIN | SH4_PCICR_FTO |
+		     PCICR_ENDIANNESS,
 		     chan->reg_base + SH4_PCICR);
 
 	ret = register_pci_controller(chan);

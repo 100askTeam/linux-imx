@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /* 
  * Driver for Intel I82092AA PCI-PCMCIA bridge.
  *
@@ -17,7 +18,6 @@
 
 #include <pcmcia/ss.h>
 
-#include <asm/system.h>
 #include <asm/io.h>
 
 #include "i82092aa.h"
@@ -26,14 +26,9 @@
 MODULE_LICENSE("GPL");
 
 /* PCI core routines */
-static struct pci_device_id i82092aa_pci_ids[] = {
-	{
-	      .vendor = PCI_VENDOR_ID_INTEL,
-	      .device = PCI_DEVICE_ID_INTEL_82092AA_0,
-	      .subvendor = PCI_ANY_ID,
-	      .subdevice = PCI_ANY_ID,
-	 },
-	 {} 
+static const struct pci_device_id i82092aa_pci_ids[] = {
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82092AA_0) },
+	{ }
 };
 MODULE_DEVICE_TABLE(pci, i82092aa_pci_ids);
 
@@ -41,7 +36,7 @@ static struct pci_driver i82092aa_pci_driver = {
 	.name           = "i82092aa",
 	.id_table       = i82092aa_pci_ids,
 	.probe          = i82092aa_pci_probe,
-	.remove         = __devexit_p(i82092aa_pci_remove),
+	.remove         = i82092aa_pci_remove,
 };
 
 
@@ -73,7 +68,7 @@ static struct socket_info sockets[MAX_SOCKETS];
 static int socket_count;  /* shortcut */                                  	                                	
 
 
-static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int i82092aa_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	unsigned char configbyte;
 	int i, ret;
@@ -122,9 +117,9 @@ static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_de
 		
 		if (card_present(i)) {
 			sockets[i].card_state = 3;
-			dprintk(KERN_DEBUG "i82092aa: slot %i is occupied\n",i);
+			dev_dbg(&dev->dev, "i82092aa: slot %i is occupied\n", i);
 		} else {
-			dprintk(KERN_DEBUG "i82092aa: slot %i is vacant\n",i);
+			dev_dbg(&dev->dev, "i82092aa: slot %i is vacant\n", i);
 		}
 	}
 		
@@ -133,13 +128,11 @@ static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_de
 	pci_write_config_byte(dev, 0x50, configbyte); /* PCI Interrupt Routing Register */
 
 	/* Register the interrupt handler */
-	dprintk(KERN_DEBUG "Requesting interrupt %i \n",dev->irq);
+	dev_dbg(&dev->dev, "Requesting interrupt %i\n", dev->irq);
 	if ((ret = request_irq(dev->irq, i82092aa_interrupt, IRQF_SHARED, "i82092aa", i82092aa_interrupt))) {
 		printk(KERN_ERR "i82092aa: Failed to register IRQ %d, aborting\n", dev->irq);
 		goto err_out_free_res;
 	}
-
-	pci_set_drvdata(dev, &sockets[i].socket);
 
 	for (i = 0; i<socket_count; i++) {
 		sockets[i].socket.dev.parent = &dev->dev;
@@ -168,16 +161,16 @@ err_out_disable:
 	return ret;			
 }
 
-static void __devexit i82092aa_pci_remove(struct pci_dev *dev)
+static void i82092aa_pci_remove(struct pci_dev *dev)
 {
-	struct pcmcia_socket *socket = pci_get_drvdata(dev);
+	int i;
 
 	enter("i82092aa_pci_remove");
 	
 	free_irq(dev->irq, i82092aa_interrupt);
 
-	if (socket)
-		pcmcia_unregister_socket(socket);
+	for (i = 0; i < socket_count; i++)
+		pcmcia_unregister_socket(&sockets[i].socket);
 
 	leave("i82092aa_pci_remove");
 }
@@ -616,7 +609,7 @@ static int i82092aa_set_mem_map(struct pcmcia_socket *socket, struct pccard_mem_
 	
 	enter("i82092aa_set_mem_map");
 
-	pcibios_resource_to_bus(sock_info->dev, &region, mem->res);
+	pcibios_resource_to_bus(sock_info->dev->bus, &region, mem->res);
 	
 	map = mem->map;
 	if (map > 4) {

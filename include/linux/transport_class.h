@@ -1,15 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * transport_class.h - a generic container for all transport classes
  *
  * Copyright (c) 2005 - James Bottomley <James.Bottomley@steeleye.com>
- *
- * This file is licensed under GPLv2
  */
 
 #ifndef _TRANSPORT_CLASS_H_
 #define _TRANSPORT_CLASS_H_
 
 #include <linux/device.h>
+#include <linux/bug.h>
 #include <linux/attribute_container.h>
 
 struct transport_container;

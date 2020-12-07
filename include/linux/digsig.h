@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (C) 2011 Nokia Corporation
  * Copyright (C) 2011 Intel Corporation
@@ -5,11 +6,6 @@
  * Author:
  * Dmitry Kasatkin <dmitry.kasatkin@nokia.com>
  *                 <dmitry.kasatkin@intel.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2 of the License.
- *
  */
 
 #ifndef _DIGSIG_H
@@ -30,7 +26,7 @@ enum digest_algo {
 
 struct pubkey_hdr {
 	uint8_t		version;	/* key format version */
-	time_t		timestamp;	/* key made, always 0 for now */
+	uint32_t	timestamp;	/* key made, always 0 for now */
 	uint8_t		algo;
 	uint8_t		nmpi;
 	char		mpi[0];
@@ -38,7 +34,7 @@ struct pubkey_hdr {
 
 struct signature_hdr {
 	uint8_t		version;	/* signature format version */
-	time_t		timestamp;	/* signature made */
+	uint32_t	timestamp;	/* signature made */
 	uint8_t		algo;
 	uint8_t		hash;
 	uint8_t		keyid[8];
@@ -46,7 +42,7 @@ struct signature_hdr {
 	char		mpi[0];
 } __packed;
 
-#if defined(CONFIG_DIGSIG) || defined(CONFIG_DIGSIG_MODULE)
+#if defined(CONFIG_SIGNATURE) || defined(CONFIG_SIGNATURE_MODULE)
 
 int digsig_verify(struct key *keyring, const char *sig, int siglen,
 					const char *digest, int digestlen);
@@ -59,6 +55,6 @@ static inline int digsig_verify(struct key *keyring, const char *sig,
 	return -EOPNOTSUPP;
 }
 
-#endif /* CONFIG_DIGSIG */
+#endif /* CONFIG_SIGNATURE */
 
 #endif /* _DIGSIG_H */

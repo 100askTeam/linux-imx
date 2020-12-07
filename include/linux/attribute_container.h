@@ -1,17 +1,17 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * attribute_container.h - a generic container for all classes
  *
  * Copyright (c) 2005 - James Bottomley <James.Bottomley@steeleye.com>
- *
- * This file is licensed under GPLv2
  */
 
 #ifndef _ATTRIBUTE_CONTAINER_H_
 #define _ATTRIBUTE_CONTAINER_H_
 
-#include <linux/device.h>
 #include <linux/list.h>
 #include <linux/klist.h>
+
+struct device;
 
 struct attribute_container {
 	struct list_head	node;

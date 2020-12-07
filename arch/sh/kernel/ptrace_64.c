@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * arch/sh/kernel/ptrace_64.c
  *
@@ -10,14 +11,11 @@
  *   Original x86 implementation:
  *	By Ross Biro 1/23/92
  *	edited by Linus Torvalds
- *
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file "COPYING" in the main directory of this archive
- * for more details.
  */
 #include <linux/kernel.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
+#include <linux/sched/task_stack.h>
 #include <linux/mm.h>
 #include <linux/smp.h>
 #include <linux/bitops.h>
@@ -32,13 +30,13 @@
 #include <linux/elf.h>
 #include <linux/regset.h>
 #include <asm/io.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <asm/pgtable.h>
-#include <asm/system.h>
 #include <asm/processor.h>
 #include <asm/mmu_context.h>
 #include <asm/syscalls.h>
 #include <asm/fpu.h>
+#include <asm/traps.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/syscalls.h>
@@ -504,25 +502,11 @@ asmlinkage int sh64_ptrace(long request, long pid,
 	return sys_ptrace(request, pid, addr, data);
 }
 
-static inline int audit_arch(void)
-{
-	int arch = EM_SH;
-
-#ifdef CONFIG_64BIT
-	arch |= __AUDIT_ARCH_64BIT;
-#endif
-#ifdef CONFIG_CPU_LITTLE_ENDIAN
-	arch |= __AUDIT_ARCH_LE;
-#endif
-
-	return arch;
-}
-
 asmlinkage long long do_syscall_trace_enter(struct pt_regs *regs)
 {
 	long long ret = 0;
 
-	secure_computing(regs->regs[9]);
+	secure_computing_strict(regs->regs[9]);
 
 	if (test_thread_flag(TIF_SYSCALL_TRACE) &&
 	    tracehook_report_syscall_entry(regs))
@@ -536,10 +520,8 @@ asmlinkage long long do_syscall_trace_enter(struct pt_regs *regs)
 	if (unlikely(test_thread_flag(TIF_SYSCALL_TRACEPOINT)))
 		trace_sys_enter(regs, regs->regs[9]);
 
-	if (unlikely(current->audit_context))
-		audit_syscall_entry(audit_arch(), regs->regs[1],
-				    regs->regs[2], regs->regs[3],
-				    regs->regs[4], regs->regs[5]);
+	audit_syscall_entry(regs->regs[1], regs->regs[2], regs->regs[3],
+			    regs->regs[4], regs->regs[5]);
 
 	return ret ?: regs->regs[9];
 }
@@ -548,9 +530,7 @@ asmlinkage void do_syscall_trace_leave(struct pt_regs *regs)
 {
 	int step;
 
-	if (unlikely(current->audit_context))
-		audit_syscall_exit(AUDITSC_RESULT(regs->regs[9]),
-				   regs->regs[9]);
+	audit_syscall_exit(regs);
 
 	if (unlikely(test_thread_flag(TIF_SYSCALL_TRACEPOINT)))
 		trace_sys_exit(regs, regs->regs[9]);
@@ -570,7 +550,7 @@ asmlinkage void do_single_step(unsigned long long vec, struct pt_regs *regs)
 	   continually stepping. */
 	local_irq_enable();
 	regs->sr &= ~SR_SSTEP;
-	force_sig(SIGTRAP, current);
+	force_sig(SIGTRAP);
 }
 
 /* Called with interrupts disabled */
@@ -581,7 +561,7 @@ BUILD_TRAP_HANDLER(breakpoint)
 	/* We need to forward step the PC, to counteract the backstep done
 	   in signal.c. */
 	local_irq_enable();
-	force_sig(SIGTRAP, current);
+	force_sig(SIGTRAP);
 	regs->pc += 4;
 }
 

@@ -1,10 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /* Kernel module to match ROUTING parameters. */
 
 /* (C) 2001-2002 Andras Kis-Szabo <kisza@sch.bme.hu>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
  */
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #include <linux/module.h>
@@ -42,14 +39,14 @@ static bool rt_mt6(const struct sk_buff *skb, struct xt_action_param *par)
 	const struct ipv6_rt_hdr *rh;
 	const struct ip6t_rt *rtinfo = par->matchinfo;
 	unsigned int temp;
-	unsigned int ptr;
+	unsigned int ptr = 0;
 	unsigned int hdrlen = 0;
 	bool ret = false;
 	struct in6_addr _addr;
 	const struct in6_addr *ap;
 	int err;
 
-	err = ipv6_find_hdr(skb, &ptr, NEXTHDR_ROUTING, NULL);
+	err = ipv6_find_hdr(skb, &ptr, NEXTHDR_ROUTING, NULL, NULL);
 	if (err < 0) {
 		if (err != -ENOENT)
 			par->hotdrop = true;
@@ -137,7 +134,10 @@ static bool rt_mt6(const struct sk_buff *skb, struct xt_action_param *par)
 							sizeof(_addr),
 							&_addr);
 
-				BUG_ON(ap == NULL);
+				if (ap == NULL) {
+					par->hotdrop = true;
+					return false;
+				}
 
 				if (ipv6_addr_equal(ap, &rtinfo->addrs[i])) {
 					pr_debug("i=%d temp=%d;\n", i, temp);
@@ -166,7 +166,10 @@ static bool rt_mt6(const struct sk_buff *skb, struct xt_action_param *par)
 							+ temp * sizeof(_addr),
 							sizeof(_addr),
 							&_addr);
-				BUG_ON(ap == NULL);
+				if (ap == NULL) {
+					par->hotdrop = true;
+					return false;
+				}
 
 				if (!ipv6_addr_equal(ap, &rtinfo->addrs[temp]))
 					break;

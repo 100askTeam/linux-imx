@@ -1,38 +1,31 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * intel_scu_ipc.c: Driver for the Intel SCU IPC mechanism
+ * Driver for the Intel SCU IPC mechanism
  *
  * (C) Copyright 2008-2010 Intel Corporation
  * Author: Sreedhara DS (sreedhara.ds@intel.com)
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; version 2
- * of the License.
- *
- * This driver provides ioctl interfaces to call intel scu ipc driver api
+ * This driver provides IOCTL interfaces to call Intel SCU IPC driver API.
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/errno.h>
-#include <linux/types.h>
-#include <linux/fs.h>
 #include <linux/fcntl.h>
+#include <linux/fs.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/sched.h>
-#include <linux/uaccess.h>
 #include <linux/slab.h>
-#include <linux/init.h>
+#include <linux/types.h>
+#include <linux/uaccess.h>
+
 #include <asm/intel_scu_ipc.h>
 
 static int major;
 
-#define MAX_FW_SIZE 264192
-
-/* ioctl commnds */
+/* IOCTL commands */
 #define	INTE_SCU_IPC_REGISTER_READ	0
 #define INTE_SCU_IPC_REGISTER_WRITE	1
 #define INTE_SCU_IPC_REGISTER_UPDATE	2
-#define INTE_SCU_IPC_FW_UPDATE		0xA2
 
 struct scu_ipc_data {
 	u32     count;  /* No. of registers */
@@ -52,7 +45,7 @@ struct scu_ipc_data {
 
 static int scu_reg_access(u32 cmd, struct scu_ipc_data  *data)
 {
-	int count = data->count;
+	unsigned int count = data->count;
 
 	if (count == 0 || count == 3 || count > 4)
 		return -EINVAL;
@@ -88,27 +81,14 @@ static long scu_ipc_ioctl(struct file *fp, unsigned int cmd,
 	if (!capable(CAP_SYS_RAWIO))
 		return -EPERM;
 
-	if (cmd == INTE_SCU_IPC_FW_UPDATE) {
-			u8 *fwbuf = kmalloc(MAX_FW_SIZE, GFP_KERNEL);
-			if (fwbuf == NULL)
-				return -ENOMEM;
-			if (copy_from_user(fwbuf, (u8 *)arg, MAX_FW_SIZE)) {
-				kfree(fwbuf);
-				return -EFAULT;
-			}
-			ret = intel_scu_ipc_fw_update(fwbuf, MAX_FW_SIZE);
-			kfree(fwbuf);
-			return ret;
-	} else {
-		if (copy_from_user(&data, argp, sizeof(struct scu_ipc_data)))
-			return -EFAULT;
-		ret = scu_reg_access(cmd, &data);
-		if (ret < 0)
-			return ret;
-		if (copy_to_user(argp, &data, sizeof(struct scu_ipc_data)))
-			return -EFAULT;
-		return 0;
-	}
+	if (copy_from_user(&data, argp, sizeof(struct scu_ipc_data)))
+		return -EFAULT;
+	ret = scu_reg_access(cmd, &data);
+	if (ret < 0)
+		return ret;
+	if (copy_to_user(argp, &data, sizeof(struct scu_ipc_data)))
+		return -EFAULT;
+	return 0;
 }
 
 static const struct file_operations scu_ipc_fops = {

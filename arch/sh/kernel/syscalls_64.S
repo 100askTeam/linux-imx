@@ -1,13 +1,10 @@
-/*
+/* SPDX-License-Identifier: GPL-2.0
+ *
  * arch/sh/kernel/syscalls_64.S
  *
  * Copyright (C) 2000, 2001  Paolo Alberelli
  * Copyright (C) 2004 - 2007  Paul Mundt
  * Copyright (C) 2003, 2004 Richard Curnow
- *
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file "COPYING" in the main directory of this archive
- * for more details.
  */
 
 #include <linux/sys.h>
@@ -208,8 +205,8 @@ sys_call_table:
 	.long sys_capset		/* 185 */
 	.long sys_sigaltstack
 	.long sys_sendfile
-	.long sys_ni_syscall	/* streams1 */
-	.long sys_ni_syscall	/* streams2 */
+	.long sys_ni_syscall	/* getpmsg */
+	.long sys_ni_syscall	/* putpmsg */
 	.long sys_vfork			/* 190 */
 	.long sys_getrlimit
 	.long sys_mmap2
@@ -296,8 +293,8 @@ sys_call_table:
 	.long sys_futex
 	.long sys_sched_setaffinity
 	.long sys_sched_getaffinity	/* 270 */
-	.long sys_ni_syscall
-	.long sys_ni_syscall
+	.long sys_ni_syscall		/* reserved for set_thread_area */
+	.long sys_ni_syscall		/* reserved for get_thread_area */
 	.long sys_io_setup
 	.long sys_io_destroy
 	.long sys_io_getevents		/* 275 */
@@ -404,3 +401,19 @@ sys_call_table:
 	.long sys_setns			/* 375 */
 	.long sys_process_vm_readv
 	.long sys_process_vm_writev
+	.long sys_kcmp
+	.long sys_finit_module
+	.long sys_sched_getattr		/* 380 */
+	.long sys_sched_setattr
+	.long sys_renameat2
+	.long sys_seccomp
+	.long sys_getrandom
+	.long sys_memfd_create		/* 385 */
+	.long sys_bpf
+	.long sys_execveat
+	.long sys_userfaultfd
+	.long sys_membarrier
+	.long sys_mlock2		/* 390 */
+	.long sys_copy_file_range
+	.long sys_preadv2
+	.long sys_pwritev2
